@@ -1,176 +1,138 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AIポスター・チラシ報告転記ツール</title>
-<style>
-  :root {
-    --bg: #f6f4ee; --panel: #ffffff; --ink: #26261f; --ink-soft: #6b6a5e;
-    --line: #dedad0; --accent: #3b6e52; --mono: monospace; --sans: sans-serif;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.6; }
-  .wrap { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
-  h1 { font-size: 22px; margin-bottom: 4px; }
-  .sub { color: var(--ink-soft); font-size: 13px; margin-bottom: 20px; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-  label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; font-weight: bold; }
-  input[type="text"], textarea, input[type="file"] { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
-  textarea { min-height: 120px; resize: vertical; }
-  .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 12px 20px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
-  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .tab-group { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
-  .tab { flex: 1; min-width: 100px; padding: 10px 5px; text-align: center; background: var(--line); border-radius: 6px; cursor: pointer; font-size: 12px; }
-  .tab.active { background: var(--accent); color: white; font-weight: bold; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 99; }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>🤖 AI ポスター・チラシ報告転記ツール</h1>
-  <p class="sub">LINEの文章・テキストファイル・画像をAIが自動解析してスプレッドシートへ転記します。</p>
+const GEMINI_API_KEY = 'AQ.Ab8RN6K0TPaqvq3U3AXnkFpeQscbrY0XUnwS2UJzKvUJHOkifQ'; // ★APIキー
 
-  <details class="panel">
-    <summary style="font-size:13px; color:var(--ink-soft); cursor:pointer;">⚙️ スプレッドシート連携URLの設定</summary>
-    <div style="margin-top: 10px;">
-      <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
-      <button onclick="saveUrl()" style="margin-top:5px; padding:5px 10px;">URL保存</button>
-    </div>
-  </details>
-
-  <div class="panel">
-    <div class="tab-group">
-      <div class="tab active" id="tabText" onclick="switchTab('text')">💬 テキスト貼り付け</div>
-      <div class="tab" id="tabFile" onclick="switchTab('file')">📄 テキストファイル</div>
-      <div class="tab" id="tabImage" onclick="switchTab('image')">📷 画像/スクショ</div>
-    </div>
-
-    <!-- 1. テキスト直接入力 -->
-    <div id="secText">
-      <label>LINEのトーク文やメモをそのまま貼り付け</label>
-      <textarea id="inputText" placeholder="【例】&#10;むらおかです！今日大正保育園と湖山保育園にチラシ50枚ずつ渡してきました〜！"></textarea>
-    </div>
-
-    <!-- 2. テキストファイル添付 -->
-    <div id="secFile" style="display:none;">
-      <label>テキストファイル（.txt / .csv など）を選択</label>
-      <input type="file" id="inputFile" accept=".txt,.csv,.log,.md">
-    </div>
-
-    <!-- 3. 画像添付 -->
-    <div id="secImage" style="display:none;">
-      <label>LINEのスクショや写真を選択</label>
-      <input type="file" id="inputImage" accept="image/*">
-    </div>
-
-    <button class="btn" id="sendBtn" onclick="processAndSend()">✨ AIで解析してスプレッドシートへ送信</button>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-  let currentTab = 'text';
-
-  const savedUrl = localStorage.getItem('poster_ai_gas_url') || '';
-  if (savedUrl) document.getElementById('gasUrl').value = savedUrl;
-
-  function saveUrl() {
-    localStorage.setItem('poster_ai_gas_url', document.getElementById('gasUrl').value.trim());
-    showToast('URLを保存しました');
-  }
-
-  function switchTab(type) {
-    currentTab = type;
-    document.getElementById('tabText').classList.toggle('active', type === 'text');
-    document.getElementById('tabFile').classList.toggle('active', type === 'file');
-    document.getElementById('tabImage').classList.toggle('active', type === 'image');
-    
-    document.getElementById('secText').style.display = type === 'text' ? 'block' : 'none';
-    document.getElementById('secFile').style.display = type === 'file' ? 'block' : 'none';
-    document.getElementById('secImage').style.display = type === 'image' ? 'block' : 'none';
-  }
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.style.display = 'block';
-    setTimeout(() => t.style.display = 'none', 3000);
-  }
-
-  async function processAndSend() {
-    const url = localStorage.getItem('poster_ai_gas_url');
-    if (!url) { alert('設定エリアでGASのWebアプリURLを保存してください。'); return; }
-
-    const btn = document.getElementById('sendBtn');
-    btn.disabled = true;
-    btn.textContent = '🤖 AIが解析＆書き込み中...';
-
-    let payload = {};
-
-    try {
-      if (currentTab === 'text') {
-        const text = document.getElementById('inputText').value.trim();
-        if (!text) { alert('テキストを入力してください'); resetBtn(); return; }
-        payload = { type: 'text', text: text };
-      } 
-      else if (currentTab === 'file') {
-        const fileInput = document.getElementById('inputFile');
-        if (!fileInput.files[0]) { alert('ファイルを選択してください'); resetBtn(); return; }
-        const textContent = await readAsText(fileInput.files[0]);
-        payload = { type: 'text', text: textContent };
-      } 
-      else {
-        const fileInput = document.getElementById('inputImage');
-        if (!fileInput.files[0]) { alert('画像を選択してください'); resetBtn(); return; }
-        const file = fileInput.files[0];
-        const base64 = await toBase64(file);
-        payload = { type: 'image', data: base64, mimeType: file.type };
-      }
-
-      fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      }).then(res => res.json()).then(data => {
-        if (data.status === 'success') {
-          showToast(`成功！ ${data.count} 件のデータを追加しました！`);
-          document.getElementById('inputText').value = '';
-          document.getElementById('inputFile').value = '';
-          document.getElementById('inputImage').value = '';
-        } else {
-          alert('エラーが発生しました: ' + data.message);
-        }
-      }).catch(err => {
-        alert('通信エラーが発生しました');
-      }).finally(() => {
-        resetBtn();
-      });
-
-    } catch(e) {
-      alert('ファイル読み込みエラー: ' + e.message);
-      resetBtn();
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error("送信されたデータが空です。");
     }
+
+    const contents = JSON.parse(e.postData.contents);
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    let promptText = "";
+    let imageParts = null;
+
+    if (contents.type === 'image') {
+      const base64Data = contents.data.split(',')[1];
+      imageParts = {
+        inlineData: {
+          mimeType: contents.mimeType,
+          data: base64Data
+        }
+      };
+      promptText = "添付された画像（LINEのスクショや写真）から、ポスター・チラシの設置情報を読み取って整理してください。";
+    } else {
+      promptText = contents.text;
+    }
+
+    const systemPrompt = `
+あなたは優秀なデータ入力アシスタントです。
+以下の報告内容（テキストまたは画像）からポスターやチラシの設置情報を抽出し、必ず純粋なJSON配列のみを出力してください。
+
+【重要な抽出ルール・除外条件】
+1. **引用リプライの無視**:
+   LINEのトーク画面上部に表示されている「過去メッセージの引用（返信元の小さな枠や引用文）」は、重複登録を防ぐため**完全に無視・除外**してください。画面の下側にあるメインの新規投稿文のみを対象としてください。
+2. **店舗・場所の分割**:
+   複数の店舗や場所が含まれている場合は、1店舗ごとにオブジェクトを分割してください。
+3. **文言のクレンジング**:
+   挨拶、雑談、感謝の言葉、広告やアプリのメニュー表示などの文言は除去し、「場所名・店舗名」のみを location に設定してください。
+4. **補完ルール**:
+   報告者名や日付が投稿内に存在すればそれを抽出し、見当たらない場合は date: "9/22"（本日の日付）、who: "担当者" と補完してください。
+
+【出力形式（JSONのみ。解説やマークダウンは一切含めないでください）】
+[
+  {
+    "date": "日付（例: 9/22）",
+    "who": "報告者名",
+    "location": "設置場所・店舗名",
+    "type": "ポスター または チラシ または 両方",
+    "status": "OK または 交渉中"
+  }
+]
+`;
+
+    // Gemini API呼出（自動再試行付き）
+    const rawAiText = callGeminiAPIWithRetry(systemPrompt + "\n\n【対象データ】\n" + promptText, imageParts);
+    
+    // JSON文字列の抽出（```json 〜 ``` などの装飾を除去）
+    let cleanJsonStr = rawAiText;
+    const jsonMatch = rawAiText.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      cleanJsonStr = jsonMatch[0];
+    }
+
+    const rows = JSON.parse(cleanJsonStr);
+
+    // スプレッドシートへ追記
+    rows.forEach(r => {
+      sheet.appendRow([
+        r.date || '',
+        r.who || '担当者',
+        r.location || '',
+        r.type || 'ポスター',
+        r.status || 'OK'
+      ]);
+    });
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success', count: rows.length }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// 混雑(503)時に自動リトライするGemini API呼出関数
+function callGeminiAPIWithRetry(promptText, imageParts) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY;
+  
+  let parts = [{ text: promptText }];
+  if (imageParts) {
+    parts.push(imageParts);
   }
 
-  function resetBtn() {
-    const btn = document.getElementById('sendBtn');
-    btn.disabled = false;
-    btn.textContent = '✨ AIで解析してスプレッドシートへ送信';
+  const payload = {
+    contents: [{ parts: parts }]
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  let response;
+  let responseCode;
+  let responseText;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    response = UrlFetchApp.fetch(url, options);
+    responseCode = response.getResponseCode();
+    responseText = response.getContentText();
+
+    if (responseCode === 200) {
+      break;
+    }
+
+    if (responseCode === 503 && attempt < 3) {
+      Utilities.sleep(2000 * attempt);
+      continue;
+    }
+
+    throw new Error("Gemini APIエラー (HTTP " + responseCode + "): " + responseText);
   }
 
-  const toBase64 = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-  });
+  const json = JSON.parse(responseText);
+  
+  if (!json.candidates || json.candidates.length === 0 || !json.candidates[0].content) {
+    throw new Error("Geminiからのレスポンスにデータが含まれていませんでした: " + responseText);
+  }
 
-  const readAsText = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsText(file, 'UTF-8');
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-  });
-</script>
-</body>
-</html>
+  return json.candidates[0].content.parts[0].text;
+}
+
+function authorizeTest() {
+  UrlFetchApp.fetch("https://www.google.com");
+}
