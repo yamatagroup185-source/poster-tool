@@ -16,20 +16,20 @@
   .sub { color: var(--ink-soft); font-size: 13px; margin-bottom: 20px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
   label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; font-weight: bold; }
-  input[type="text"], textarea { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+  input[type="text"], textarea, input[type="file"] { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
   textarea { min-height: 120px; resize: vertical; }
   .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 12px 20px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
   .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .tab-group { display: flex; gap: 10px; margin-bottom: 15px; }
-  .tab { flex: 1; padding: 8px; text-align: center; background: var(--line); border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .tab-group { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+  .tab { flex: 1; min-width: 100px; padding: 10px 5px; text-align: center; background: var(--line); border-radius: 6px; cursor: pointer; font-size: 12px; }
   .tab.active { background: var(--accent); color: white; font-weight: bold; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 99; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🤖 AI ポスター・チラシ報告転記ツール</h1>
-  <p class="sub">LINEのバラバラな文章もスクショ画像も、AIが解釈して自動でスプシへ転記します。</p>
+  <p class="sub">LINEの文章・テキストファイル・画像をAIが自動解析してスプレッドシートへ転記します。</p>
 
   <details class="panel">
     <summary style="font-size:13px; color:var(--ink-soft); cursor:pointer;">⚙️ スプレッドシート連携URLの設定</summary>
@@ -41,17 +41,26 @@
 
   <div class="panel">
     <div class="tab-group">
-      <div class="tab active" id="tabText" onclick="switchTab('text')">💬 テキストを貼り付け</div>
-      <div class="tab" id="tabImage" onclick="switchTab('image')">📷 画像（スクショ）をアップ</div>
+      <div class="tab active" id="tabText" onclick="switchTab('text')">💬 テキスト貼り付け</div>
+      <div class="tab" id="tabFile" onclick="switchTab('file')">📄 テキストファイル</div>
+      <div class="tab" id="tabImage" onclick="switchTab('image')">📷 画像/スクショ</div>
     </div>
 
+    <!-- 1. テキスト直接入力 -->
     <div id="secText">
-      <label>LINEのトーク文やメモ言をそのまま貼り付け</label>
-      <textarea id="inputText" placeholder="【例】&#10;むらおかです！今日大正保育園と湖山保育園にチラシ50枚ずつ渡してきました〜！あとヤマタ本社ポスターも設置完了です！"></textarea>
+      <label>LINEのトーク文やメモをそのまま貼り付け</label>
+      <textarea id="inputText" placeholder="【例】&#10;むらおかです！今日大正保育園と湖山保育園にチラシ50枚ずつ渡してきました〜！"></textarea>
     </div>
 
+    <!-- 2. テキストファイル添付 -->
+    <div id="secFile" style="display:none;">
+      <label>テキストファイル（.txt / .csv など）を選択</label>
+      <input type="file" id="inputFile" accept=".txt,.csv,.log,.md">
+    </div>
+
+    <!-- 3. 画像添付 -->
     <div id="secImage" style="display:none;">
-      <label>LINEのスクショや写真をアップロード</label>
+      <label>LINEのスクショや写真を選択</label>
       <input type="file" id="inputImage" accept="image/*">
     </div>
 
@@ -75,8 +84,11 @@
   function switchTab(type) {
     currentTab = type;
     document.getElementById('tabText').classList.toggle('active', type === 'text');
+    document.getElementById('tabFile').classList.toggle('active', type === 'file');
     document.getElementById('tabImage').classList.toggle('active', type === 'image');
+    
     document.getElementById('secText').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('secFile').style.display = type === 'file' ? 'block' : 'none';
     document.getElementById('secImage').style.display = type === 'image' ? 'block' : 'none';
   }
 
@@ -96,40 +108,66 @@
 
     let payload = {};
 
-    if (currentTab === 'text') {
-      const text = document.getElementById('inputText').value.trim();
-      if (!text) { alert('テキストを入力してください'); btn.disabled = false; btn.textContent = '✨ AIで解析してスプレッドシートへ送信'; return; }
-      payload = { type: 'text', text: text };
-    } else {
-      const fileInput = document.getElementById('inputImage');
-      if (!fileInput.files[0]) { alert('画像を選択してください'); btn.disabled = false; btn.textContent = '✨ AIで解析してスプレッドシートへ送信'; return; }
-      const file = fileInput.files[0];
-      const base64 = await toBase64(file);
-      payload = { type: 'image', data: base64, mimeType: file.type };
-    }
-
-    fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }).then(res => res.json()).then(data => {
-      if (data.status === 'success') {
-        showToast(`成功！ ${data.count} 件のデータを自動整理して追加しました！`);
-        document.getElementById('inputText').value = '';
-        document.getElementById('inputImage').value = '';
-      } else {
-        alert('エラーが発生しました: ' + data.message);
+    try {
+      if (currentTab === 'text') {
+        const text = document.getElementById('inputText').value.trim();
+        if (!text) { alert('テキストを入力してください'); resetBtn(); return; }
+        payload = { type: 'text', text: text };
+      } 
+      else if (currentTab === 'file') {
+        const fileInput = document.getElementById('inputFile');
+        if (!fileInput.files[0]) { alert('ファイルを選択してください'); resetBtn(); return; }
+        const textContent = await readAsText(fileInput.files[0]);
+        payload = { type: 'text', text: textContent };
+      } 
+      else {
+        const fileInput = document.getElementById('inputImage');
+        if (!fileInput.files[0]) { alert('画像を選択してください'); resetBtn(); return; }
+        const file = fileInput.files[0];
+        const base64 = await toBase64(file);
+        payload = { type: 'image', data: base64, mimeType: file.type };
       }
-    }).catch(err => {
-      alert('通信エラーが発生しました');
-    }).finally(() => {
-      btn.disabled = false;
-      btn.textContent = '✨ AIで解析してスプレッドシートへ送信';
-    });
+
+      fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }).then(res => res.json()).then(data => {
+        if (data.status === 'success') {
+          showToast(`成功！ ${data.count} 件のデータを追加しました！`);
+          document.getElementById('inputText').value = '';
+          document.getElementById('inputFile').value = '';
+          document.getElementById('inputImage').value = '';
+        } else {
+          alert('エラーが発生しました: ' + data.message);
+        }
+      }).catch(err => {
+        alert('通信エラーが発生しました');
+      }).finally(() => {
+        resetBtn();
+      });
+
+    } catch(e) {
+      alert('ファイル読み込みエラー: ' + e.message);
+      resetBtn();
+    }
+  }
+
+  function resetBtn() {
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = false;
+    btn.textContent = '✨ AIで解析してスプレッドシートへ送信';
   }
 
   const toBase64 = file => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
+  const readAsText = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsText(file, 'UTF-8');
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
   });
