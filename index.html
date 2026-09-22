@@ -13,8 +13,6 @@
     --line: #dedad0;
     --accent: #3b6e52;
     --accent-soft: #e6efe8;
-    --sheets: #0f9d58;
-    --sheets-soft: #e8f5e9;
     --mono: "SFMono-Regular", Consolas, monospace;
     --serif: "Shippori Mincho", serif;
     --sans: "Zen Kaku Gothic New", sans-serif;
@@ -28,8 +26,6 @@
       --line: #3a3b32;
       --accent: #7fb996;
       --accent-soft: #2a352c;
-      --sheets: #81c784;
-      --sheets-soft: #1b3320;
     }
   }
   * { box-sizing: border-box; }
@@ -91,7 +87,7 @@
   </header>
 
   <details class="panel" style="margin-bottom: 16px;">
-    <summary style="font-size:13px; color:var(--ink-soft); cursor:pointer;">⚙️ スプレッドシート連携URLの設定（最初の一回だけ設定）</summary>
+    <summary style="font-size:13px; color:var(--ink-soft); cursor:pointer;">⚙️ スプレッドシート連携URLの設定</summary>
     <div style="margin-top: 12px;">
       <label class="field-label" for="gasUrl">Google Apps ScriptのWebアプリURL</label>
       <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
@@ -115,7 +111,7 @@
     <div style="overflow-x: auto; margin-top: 12px;">
       <table>
         <thead>
-          <tr><th>日付</th><th>報告者</th><th>内容</th><th>判定</th></tr>
+          <tr><th>日付</th><th>報告者</th><th>場所・内容</th><th>判定</th></tr>
         </thead>
         <tbody id="resultBody"></tbody>
       </table>
@@ -133,7 +129,6 @@
 
   let currentExtractedRows = [];
 
-  // 保存済みのURLを読み込み
   const savedUrl = localStorage.getItem('poster_tool_gas_url') || '';
   if (savedUrl) document.getElementById('gasUrl').value = savedUrl;
 
@@ -144,8 +139,8 @@
   });
 
   function classify(text) {
-    if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK系', cls: 'ok' };
-    if (pendingRe.test(text)) return { label: '交渉/確認中', cls: 'pending' };
+    if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK', cls: 'ok' };
+    if (pendingRe.test(text)) return { label: '交渉中', cls: 'pending' };
     return { label: '要確認', cls: 'info' };
   }
 
@@ -153,7 +148,7 @@
     const lines = raw.split(/\r?\n/);
     const results = [];
     let currentDate = '日付不明';
-    let currentWho = '不明';
+    let currentWho = '担当者';
 
     const dateReHeader = /^(\d{4}\/\d{1,2}\/\d{1,2}|\d{1,2}月\d{1,2}日)/;
     const msgStartRe = /^(\d{1,2}:\d{2})\t([^\t]+)\t(.*)$/;
@@ -165,6 +160,7 @@
       const dh = line.match(dateReHeader);
       if (dh) { currentDate = dh[1]; }
 
+      // LINEトーク形式
       const mm = line.match(msgStartRe);
       if (mm) {
         currentWho = mm[2].trim();
@@ -175,26 +171,36 @@
         continue;
       }
 
+      // 箇条書き・メモ形式
       if (keywordRe.test(line)) {
         let date = currentDate;
-        let who = currentWho;
+        let who = '担当者';
         let content = line;
 
+        // 日付の抽出
         const inlineDate = line.match(/(\d{1,2}[\/月]\d{1,2}日?)/);
         if (inlineDate) {
           date = inlineDate[1];
           content = content.replace(inlineDate[0], '').trim();
         }
 
+        // スペース区切りで名前と内容を判別
         const spaceParts = content.split(/[\s ]+/);
         if (spaceParts.length > 1) {
           who = spaceParts[0];
           content = spaceParts.slice(1).join(' ');
+        } else {
+          // 知られている名前キーワードでの判別
+          const knownWho = content.match(/^(むらおか|きむら|奥田|森本|山根|谷口|那須|増田|倉田|まい|樋口)/);
+          if (knownWho) {
+            who = knownWho[1];
+            content = content.replace(knownWho[0], '').trim();
+          }
         }
 
         results.push({
           date: date !== '日付不明' ? date : '随時',
-          who: who !== '不明' ? who : '担当者',
+          who: who,
           text: content || line
         });
       }
