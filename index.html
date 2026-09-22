@@ -37,9 +37,9 @@
     padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0;
     line-height: 1.7;
   }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 40px 20px 80px; }
   header { margin-bottom: 24px; }
-  h1 { font-family: var(--serif); font-size: clamp(22px, 4vw, 28px); font-weight: 600; margin: 0 0 8px; }
+  h1 { font-family: var(--serif); font-size: clamp(20px, 4vw, 26px); font-weight: 600; margin: 0 0 8px; }
   .sub { color: var(--ink-soft); font-size: 14px; margin: 0; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
   label.field-label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; font-weight: 600; }
@@ -67,6 +67,10 @@
   th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
   th { color: var(--ink-soft); font-weight: 600; font-size: 12px; }
   td.date { white-space: nowrap; color: var(--ink-soft); font-size: 13px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: var(--line); font-weight: 600; }
+  .badge.poster { background: #e3f2fd; color: #1565c0; }
+  .badge.flyer { background: #fff3e0; color: #e65100; }
+  .badge.both { background: #f3e5f5; color: #7b1fa2; }
   .status { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 12px; }
   .status.ok { background: var(--accent-soft); color: var(--accent); }
   .status.pending { background: #f5e8dd; color: #a8622f; }
@@ -83,7 +87,7 @@
 <div class="wrap">
   <header>
     <h1>ポスター・フライヤー報告 抽出・転記ツール</h1>
-    <p class="sub">トーク履歴やメモから抽出し、Googleスプレッドシートへ直接転記できます。</p>
+    <p class="sub">LINE文章やメモから「場所」と「区分（ポスター/フライヤー）」だけを抽出してスプシへ転記します。</p>
   </header>
 
   <details class="panel" style="margin-bottom: 16px;">
@@ -96,10 +100,13 @@
   </details>
 
   <div class="panel">
-    <label class="field-label" for="input">テキストを貼り付けて抽出</label>
-    <textarea id="input" placeholder="【入力例】&#10;9/22 むらおか ポスター設置ヤマタ本社&#10;9/23 谷口 チラシ50枚 配布完了"></textarea>
+    <label class="field-label" for="reporter">報告者（任意・一括設定）</label>
+    <input type="text" id="reporter" placeholder="例: むらおか（空欄でもOK）" style="margin-bottom: 14px;">
+
+    <label class="field-label" for="input">LINEのテキストやメモを貼り付け</label>
+    <textarea id="input" placeholder="【入力例】&#10;ヤマタ本社にポスター貼ってもらいました！&#10;大正保育園 チラシ50枚設置OKです&#10;ジュジュアン ポスターとフライヤー両方受け取ってもらえました"></textarea>
     <div class="row">
-      <button class="primary" id="extract">抽出して一覧化</button>
+      <button class="primary" id="extract">不要情報を削って抽出</button>
     </div>
   </div>
 
@@ -111,7 +118,7 @@
     <div style="overflow-x: auto; margin-top: 12px;">
       <table>
         <thead>
-          <tr><th>日付</th><th>報告者</th><th>場所・内容</th><th>判定</th></tr>
+          <tr><th>日付</th><th>報告者</th><th>設置場所</th><th>区分</th><th>判定</th></tr>
         </thead>
         <tbody id="resultBody"></tbody>
       </table>
@@ -123,7 +130,6 @@
 
 <script>
 (function () {
-  const keywordRe = /(ポスター|フライヤー|チラシ|設置|配布|掲示)/i;
   const okRe = /(オッケー|OK|ok|Ok|完了|設置|貼|承諾|許可|いただきました|済み)/;
   const pendingRe = /(交渉中|打診|検討|確認中|未定|依頼中|お願い)/;
 
@@ -138,72 +144,69 @@
     showToast('連携URLを保存しました');
   });
 
-  function classify(text) {
+  // 区分（ポスター/フライヤー/両方）の判定
+  function detectType(text) {
+    const hasPoster = /(ポスター)/.test(text);
+    const hasFlyer = /(チラシ|フライヤー)/.test(text);
+
+    if (hasPoster && hasFlyer) return { label: '両方', cls: 'both' };
+    if (hasPoster) return { label: 'ポスター', cls: 'poster' };
+    if (hasFlyer) return { label: 'フライヤー', cls: 'flyer' };
+    return { label: 'ポスター', cls: 'poster' }; // デフォルトはポスター
+  }
+
+  // 雑多な文章から「場所名」だけをきれいに抜き出す処理
+  function cleanLocation(text) {
+    let loc = text;
+
+    // 日付表現の削除
+    loc = loc.replace(/(\d{1,2}[\/月]\d{1,2}日?)/g, '');
+
+    // 余計な接続詞や文言・挨拶の削除
+    loc = loc.replace(/(ポスター|チラシ|フライヤー|設置|配布|掲示|貼ってもらいました|置かせてもらいました|受け取ってもらえました|OK|オッケー|完了|済み|です|でした|よろしくお願いいたします|おねがいします)/gi, '');
+    loc = loc.replace(/(\d+枚|\d+部)/g, ''); // 枚数表記の削除
+    loc = loc.replace(/(に|へ|で|も|両方|各種)/g, ' '); // 助詞をスペースに置換
+
+    // 先頭や末尾の不要な記号・スペースの除去
+    loc = loc.trim().replace(/^[\s・:：\-\/]+|[\s・:：\-\/]+$/g, '');
+
+    return loc || text; // 万が一空になったら元の文章を返す
+  }
+
+  function classifyStatus(text) {
     if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK', cls: 'ok' };
     if (pendingRe.test(text)) return { label: '交渉中', cls: 'pending' };
-    return { label: '要確認', cls: 'info' };
+    return { label: 'OK', cls: 'ok' };
   }
 
   function parseText(raw) {
     const lines = raw.split(/\r?\n/);
     const results = [];
-    let currentDate = '日付不明';
-    let currentWho = '担当者';
-
-    const dateReHeader = /^(\d{4}\/\d{1,2}\/\d{1,2}|\d{1,2}月\d{1,2}日)/;
-    const msgStartRe = /^(\d{1,2}:\d{2})\t([^\t]+)\t(.*)$/;
+    const reporterInput = document.getElementById('reporter').value.trim();
+    
+    const today = new Date();
+    const dateStr = (today.getMonth() + 1) + '/' + today.getDate();
 
     for (let rawLine of lines) {
-      let line = rawLine.replace(/[\u2068\u2069]/g, '').trim();
+      let line = rawLine.trim();
       if (!line) continue;
 
-      const dh = line.match(dateReHeader);
-      if (dh) { currentDate = dh[1]; }
+      // LINEのヘッダーや時間の行はスキップ
+      if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(line) || /^\d{1,2}:\d{2}\t/.test(line)) continue;
 
-      // LINEトーク形式
-      const mm = line.match(msgStartRe);
-      if (mm) {
-        currentWho = mm[2].trim();
-        const content = mm[3];
-        if (keywordRe.test(content)) {
-          results.push({ date: currentDate, who: currentWho, text: content });
-        }
-        continue;
-      }
+      const typeInfo = detectType(line);
+      const cleanedLoc = cleanLocation(line);
+      const statusInfo = classifyStatus(line);
 
-      // 箇条書き・メモ形式
-      if (keywordRe.test(line)) {
-        let date = currentDate;
-        let who = '担当者';
-        let content = line;
-
-        // 日付の抽出
-        const inlineDate = line.match(/(\d{1,2}[\/月]\d{1,2}日?)/);
-        if (inlineDate) {
-          date = inlineDate[1];
-          content = content.replace(inlineDate[0], '').trim();
-        }
-
-        // スペース区切りで名前と内容を判別
-        const spaceParts = content.split(/[\s ]+/);
-        if (spaceParts.length > 1) {
-          who = spaceParts[0];
-          content = spaceParts.slice(1).join(' ');
-        } else {
-          // 知られている名前キーワードでの判別
-          const knownWho = content.match(/^(むらおか|きむら|奥田|森本|山根|谷口|那須|増田|倉田|まい|樋口)/);
-          if (knownWho) {
-            who = knownWho[1];
-            content = content.replace(knownWho[0], '').trim();
-          }
-        }
-
-        results.push({
-          date: date !== '日付不明' ? date : '随時',
-          who: who,
-          text: content || line
-        });
-      }
+      results.push({
+        date: dateStr,
+        who: reporterInput || '担当者',
+        location: cleanedLoc,
+        type: typeInfo.label,
+        typeCls: typeInfo.cls,
+        status: statusInfo.label,
+        statusCls: statusInfo.cls
+      });
     }
     return results;
   }
@@ -216,17 +219,16 @@
     panel.style.display = 'block';
     body.innerHTML = '';
 
-    count.textContent = rows.length + '件 抽出完了';
+    count.textContent = rows.length + '件をクレンジング抽出完了';
 
     for (const r of rows) {
-      const status = classify(r.text);
-      r.statusLabel = status.label;
       const tr = document.createElement('tr');
       tr.innerHTML =
         '<td class="date">' + r.date + '</td>' +
         '<td>' + r.who + '</td>' +
-        '<td>' + r.text + '</td>' +
-        '<td><span class="status ' + status.cls + '">' + status.label + '</span></td>';
+        '<td><strong>' + r.location + '</strong></td>' +
+        '<td><span class="badge ' + r.typeCls + '">' + r.type + '</span></td>' +
+        '<td><span class="status ' + r.statusCls + '">' + r.status + '</span></td>';
       body.appendChild(tr);
     }
   }
@@ -254,8 +256,9 @@
     const payload = currentExtractedRows.map(r => ({
       date: r.date,
       who: r.who,
-      text: r.text,
-      status: r.statusLabel
+      location: r.location,
+      type: r.type,
+      status: r.status
     }));
 
     const btn = document.getElementById('sendToSheets');
