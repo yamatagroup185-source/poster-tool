@@ -20,41 +20,27 @@ function doPost(e) {
           data: base64Data
         }
       };
-      promptText = "添付された画像（LINEのスクショや写真）から、ポスター・チラシの設置情報を読み取って整理してください。";
+      promptText = "画像内のメインの投稿文（画面上部の引用返信枠やメニューは無視）からポスター・チラシ設置情報を抽出してください。";
     } else {
       promptText = contents.text;
     }
 
-    const systemPrompt = `
-あなたは優秀なデータ入力アシスタントです。
-以下の報告内容（テキストまたは画像）からポスターやチラシの設置情報を抽出し、必ず純粋なJSON配列のみを出力してください。
+    // 高速化のためプロンプトを短く最適化
+    const systemPrompt = `LINE画像/テキストからポスター・チラシ設置場所を抽出し、以下のJSON形式のみ出力してください。
 
-【重要な抽出ルール・除外条件】
-1. **引用リプライの無視**:
-   LINEのトーク画面上部に表示されている「過去メッセージの引用（返信元の小さな枠や引用文）」は、重複登録を防ぐため**完全に無視・除外**してください。画面の下側にあるメインの新規投稿文のみを対象としてください。
-2. **店舗・場所の分割**:
-   複数の店舗や場所が含まれている場合は、1店舗ごとにオブジェクトを分割してください。
-3. **文言のクレンジング**:
-   挨拶、雑談、感謝の言葉、広告やアプリのメニュー表示などの文言は除去し、「場所名・店舗名」のみを location に設定してください。
-4. **補完ルール**:
-   報告者名や日付が投稿内に存在すればそれを抽出し、見当たらない場合は date: "9/22"（本日の日付）、who: "担当者" と補完してください。
+[ルール]
+1. 引用リプライ（返信元の枠）は無視し、メインの最新メッセージのみ抽出。
+2. 複数店舗は1店舗ごとに分割。
+3. 日付/担当者が不明なら date:"9/22", who:"担当者" と補完。
+4. 雑談や挨拶は除去しlocationは店舗・場所名のみ。
 
-【出力形式（JSONのみ。解説やマークダウンは一切含めないでください）】
-[
-  {
-    "date": "日付（例: 9/22）",
-    "who": "報告者名",
-    "location": "設置場所・店舗名",
-    "type": "ポスター または チラシ または 両方",
-    "status": "OK または 交渉中"
-  }
-]
-`;
+[JSON形式]
+[{"date":"9/22","who":"名前","location":"店舗名","type":"ポスターまたはチラシ","status":"OK"}]`;
 
-    // Gemini API呼出（自動再試行付き）
-    const rawAiText = callGeminiAPIWithRetry(systemPrompt + "\n\n【対象データ】\n" + promptText, imageParts);
+    // Gemini API呼出
+    const rawAiText = callGeminiAPI(systemPrompt + "\n\n【対象データ】\n" + promptText, imageParts);
     
-    // JSON文字列の抽出（```json 〜 ``` などの装飾を除去）
+    // JSONの抽出
     let cleanJsonStr = rawAiText;
     const jsonMatch = rawAiText.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
@@ -66,7 +52,7 @@ function doPost(e) {
     // スプレッドシートへ追記
     rows.forEach(r => {
       sheet.appendRow([
-        r.date || '',
+        r.date || '9/22',
         r.who || '担当者',
         r.location || '',
         r.type || 'ポスター',
@@ -83,8 +69,8 @@ function doPost(e) {
   }
 }
 
-// 混雑(503)時に自動リトライするGemini API呼出関数
-function callGeminiAPIWithRetry(promptText, imageParts) {
+// 通信処理（再試行処理を無くしてレスポンス速度を最優先）
+function callGeminiAPI(promptText, imageParts) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY;
   
   let parts = [{ text: promptText }];
@@ -103,31 +89,17 @@ function callGeminiAPIWithRetry(promptText, imageParts) {
     muteHttpExceptions: true
   };
 
-  let response;
-  let responseCode;
-  let responseText;
+  const response = UrlFetchApp.fetch(url, options);
+  const responseCode = response.getResponseCode();
+  const responseText = response.getContentText();
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    response = UrlFetchApp.fetch(url, options);
-    responseCode = response.getResponseCode();
-    responseText = response.getContentText();
-
-    if (responseCode === 200) {
-      break;
-    }
-
-    if (responseCode === 503 && attempt < 3) {
-      Utilities.sleep(2000 * attempt);
-      continue;
-    }
-
-    throw new Error("Gemini APIエラー (HTTP " + responseCode + "): " + responseText);
+  if (responseCode !== 200) {
+    throw new Error("APIエラー (" + responseCode + "): " + responseText);
   }
 
   const json = JSON.parse(responseText);
-  
   if (!json.candidates || json.candidates.length === 0 || !json.candidates[0].content) {
-    throw new Error("Geminiからのレスポンスにデータが含まれていませんでした: " + responseText);
+    throw new Error("解析データが取得できませんでした。");
   }
 
   return json.candidates[0].content.parts[0].text;
