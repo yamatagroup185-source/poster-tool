@@ -32,19 +32,7 @@
       --warn-soft: #3a2c22;
     }
   }
-  :root[data-theme="dark"] {
-    --bg: #1b1c17;
-    --panel: #242520;
-    --ink: #eeece2;
-    --ink-soft: #a5a394;
-    --line: #3a3b32;
-    --accent: #7fb996;
-    --accent-soft: #2a352c;
-    --warn: #d99a6c;
-    --warn-soft: #3a2c22;
-  }
   * { box-sizing: border-box; }
-  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
   body {
     margin: 0;
     background: var(--bg);
@@ -58,9 +46,7 @@
     margin: 0 auto;
     padding: 40px 20px 80px;
   }
-  header {
-    margin-bottom: 28px;
-  }
+  header { margin-bottom: 28px; }
   h1 {
     font-family: var(--serif);
     font-size: clamp(24px, 4vw, 32px);
@@ -99,7 +85,7 @@
     font-size: 13px;
     line-height: 1.6;
   }
-  textarea:focus, button:focus-visible, input:focus-visible {
+  textarea:focus, button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
@@ -178,9 +164,7 @@
   .status.ok { background: var(--accent-soft); color: var(--accent); }
   .status.pending { background: var(--warn-soft); color: var(--warn); }
   .status.info { background: var(--line); color: var(--ink-soft); }
-  .table-wrap {
-    overflow-x: auto;
-  }
+  .table-wrap { overflow-x: auto; }
   pre.output {
     background: var(--bg);
     border: 1px solid var(--line);
@@ -231,8 +215,8 @@
 <div class="wrap">
   <header>
     <h1>ポスター・フライヤー報告 抽出ツール</h1>
-    <p class="sub">LINEの「トーク履歴を送信」で書き出したテキストをそのまま貼り付けると、ポスター・フライヤー・チラシ関連の報告だけを日付順に一覧化します。判定はキーワードの機械的な拾い出しなので、抽出後の内容は必ず自分の目で確認してください。</p>
-    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日</p>
+    <p class="sub">LINEの「トーク履歴」のほか、手入力の報告メモ（例：「9月18日 むらおか ポスター設置完了」など）を貼り付けても柔軟に抽出し一覧化します。</p>
+    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日（柔軟抽出対応版）</p>
   </header>
 
   <div class="panel">
@@ -259,22 +243,21 @@
         </tbody>
       </table>
     </div>
-    <p class="sub" style="margin-top:14px;">要フォロー：公立保育園は市の後援経由でないと配布不可（9/18 リンク倉田さん報告）。市役所の幼児保育課への持ち込みが必要になる見込みで、来週動ける人が未定。</p>
   </div>
 
   <div class="panel">
-    <label class="field-label" for="input">新しいLINEトーク履歴を追加で貼り付けて更新（テキストファイルの中身）</label>
-    <textarea id="input" placeholder="ここに貼り付け（例：2026/09/14&#10;09:06&#10;きむらしんのすけ&#10;おはようございます…ポスターオッケーです😎）"></textarea>
+    <label class="field-label" for="input">テキストを貼り付けて更新（LINEトーク履歴、または報告メモ）</label>
+    <textarea id="input" placeholder="【入力例】&#10;・9月18日むらおかポスター設置ヤマタ本社&#10;・9/19 谷口 チラシ50枚 配布完了&#10;・LINEからエクスポートしたトーク履歴ファイル"></textarea>
     <div class="row">
       <button class="primary" id="extract">抽出して一覧化</button>
-      <span class="keywords">対象語：<code>ポスター</code><code>フライヤー</code><code>チラシ</code></span>
+      <span class="keywords">対象語：<code>ポスター</code><code>フライヤー</code><code>チラシ</code><code>設置</code><code>配布</code></span>
     </div>
   </div>
 
   <div class="panel" id="resultPanel" style="display:none;">
-    <div class="row" style="justify-content: space-between; margin-top:0;">
+    <div class="row" style="justify- space-between; margin-top:0; display:flex; width:100%;">
       <p class="count" id="count"></p>
-      <div class="row" style="margin-top:0;">
+      <div class="row" style="margin-top:0; margin-left:auto;">
         <button class="ghost" id="copyMd">Markdown表をコピー</button>
         <button class="ghost" id="copyCsv">CSVをコピー</button>
       </div>
@@ -282,13 +265,13 @@
     <div class="table-wrap">
       <table id="resultTable">
         <thead>
-          <tr><th>日付</th><th>報告者</th><th>本文</th><th>判定</th></tr>
+          <tr><th>日付</th><th>報告者</th><th>内容</th><th>判定</th></tr>
         </thead>
         <tbody id="resultBody"></tbody>
       </table>
     </div>
-    <div class="empty" id="emptyMsg" style="display:none;">該当するメッセージが見つかりませんでした。キーワードに引っかかる報告が本文に含まれているか確認してください。</div>
-    <details>
+    <div class="empty" id="emptyMsg" style="display:none;">該当する情報が見つかりませんでした。テキストに日付や報告内容が含まれているか確認してください。</div>
+    <details style="margin-top:14px;">
       <summary>Markdownコードブロックとして表示</summary>
       <pre class="output" id="mdOutput"></pre>
     </details>
@@ -299,37 +282,9 @@
 
 <script>
 (function () {
-  const dateRe = /^(\d{4}\/\d{1,2}\/\d{1,2})[（(]/;
-  const msgStartRe = /^(\d{1,2}:\d{2})\t([^\t]*)\t(.*)$/;
-  const keywordRe = /(ポスター|フライヤー|チラシ)/;
-  const okRe = /(オッケー|OK|ok|Ok|OKです|OKでした|完了|できます|貼れ|承諾|許可|頂きました|いただきました|可)/;
-  const pendingRe = /(交渉中|打診|検討|確認中|お願いします|できないか|お伺い|不可|断られ|お待ち)/;
-
-  function parseMessages(raw) {
-    const lines = raw.split(/\r?\n/);
-    let currentDate = '';
-    let current = null;
-    const messages = [];
-
-    for (const rawLine of lines) {
-      const line = rawLine.replace(/\u2068|\u2069/g, ''); // strip LINE's invisible bidi marks around names
-      const dm = line.match(dateRe);
-      if (dm) {
-        currentDate = dm[1];
-        if (current) { messages.push(current); current = null; }
-        continue;
-      }
-      const mm = line.match(msgStartRe);
-      if (mm) {
-        if (current) messages.push(current);
-        current = { date: currentDate, time: mm[1], who: mm[2].trim(), text: mm[3] };
-      } else if (current) {
-        current.text += '\n' + line;
-      }
-    }
-    if (current) messages.push(current);
-    return messages;
-  }
+  const keywordRe = /(ポスター|フライヤー|チラシ|設置|配布|掲示)/i;
+  const okRe = /(オッケー|OK|ok|Ok|完了|設置|貼|承諾|許可|いただきました|完了|済み)/;
+  const pendingRe = /(交渉中|打診|検討|確認中|未定|依頼中|お願い)/;
 
   function classify(text) {
     if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK系', cls: 'ok' };
@@ -337,9 +292,71 @@
     return { label: '要確認', cls: 'info' };
   }
 
-  function excerpt(text) {
-    const cleaned = text.replace(/"/g, '').trim();
-    return cleaned.length > 90 ? cleaned.slice(0, 90) + '…' : cleaned;
+  function parseText(raw) {
+    const lines = raw.split(/\r?\n/);
+    const results = [];
+    let currentDate = '日付不明';
+    let currentWho = '不明';
+
+    const dateReHeader = /^(\d{4}\/\d{1,2}\/\d{1,2}|\d{1,2}月\d{1,2}日)/;
+    const msgStartRe = /^(\d{1,2}:\d{2})\t([^\t]+)\t(.*)$/;
+
+    for (let rawLine of lines) {
+      let line = rawLine.replace(/[\u2068\u2069]/g, '').trim();
+      if (!line) continue;
+
+      // LINEトーク履歴のヘッダー日付
+      const dh = line.match(dateReHeader);
+      if (dh) {
+        currentDate = dh[1];
+      }
+
+      // LINE正規フォーマット行
+      const mm = line.match(msgStartRe);
+      if (mm) {
+        currentWho = mm[2].trim();
+        const content = mm[3];
+        if (keywordRe.test(content)) {
+          results.push({ date: currentDate, who: currentWho, text: content });
+        }
+        continue;
+      }
+
+      // 手入力メモ・簡易テキストの解析（例: 9月18日むらおかポスター設置ヤマタ本社）
+      if (keywordRe.test(line)) {
+        let date = currentDate;
+        let who = currentWho;
+        let content = line;
+
+        // 行内の日付を抽出
+        const inlineDate = line.match(/(\d{1,2}[\/月]\d{1,2}日?)/);
+        if (inlineDate) {
+          date = inlineDate[1];
+          content = content.replace(inlineDate[0], '').trim();
+        }
+
+        // 名前判定（代表的な名前やスペース区切りの冒頭）
+        const spaceParts = content.split(/[\s ]+/);
+        if (spaceParts.length > 1) {
+          who = spaceParts[0];
+          content = spaceParts.slice(1).join(' ');
+        } else {
+          // 「むらおか」「きむら」などの既知の報告者パターンの抽出を試みる
+          const knownWho = content.match(/^(むらおか|きむら|奥田|森本|山根|谷口|那須|増田|倉田|まい|樋口)/);
+          if (knownWho) {
+            who = knownWho[1];
+            content = content.replace(knownWho[0], '').trim();
+          }
+        }
+
+        results.push({
+          date: date !== '日付不明' ? date : '随時',
+          who: who !== '不明' ? who : '担当者',
+          text: content || line
+        });
+      }
+    }
+    return results;
   }
 
   function escapeHtml(s) {
@@ -366,23 +383,25 @@
 
     let md = '| 日付 | 報告者 | 内容 | 判定 |\n|---|---|---|---|\n';
     for (const r of rows) {
+      const status = classify(r.text);
       const tr = document.createElement('tr');
       tr.innerHTML =
         '<td class="date">' + escapeHtml(r.date) + '</td>' +
         '<td class="who">' + escapeHtml(r.who) + '</td>' +
-        '<td>' + escapeHtml(excerpt(r.text)) + '</td>' +
-        '<td><span class="status ' + r.status.cls + '">' + r.status.label + '</span></td>';
+        '<td>' + escapeHtml(r.text) + '</td>' +
+        '<td><span class="status ' + status.cls + '">' + status.label + '</span></td>';
       body.appendChild(tr);
-      md += '| ' + r.date + ' | ' + r.who + ' | ' + excerpt(r.text).replace(/\|/g, '/').replace(/\n/g, ' ') + ' | ' + r.status.label + ' |\n';
+      md += '| ' + r.date + ' | ' + r.who + ' | ' + r.text.replace(/\|/g, '/').replace(/\n/g, ' ') + ' | ' + status.label + ' |\n';
     }
     mdOut.textContent = md;
     mdOut.dataset.md = md;
 
     const csvHeader = '日付,報告者,内容,判定\n';
-    const csvRows = rows.map(r =>
-      [r.date, r.who, excerpt(r.text).replace(/"/g, '""'), r.status.label]
-        .map(v => '"' + v + '"').join(',')
-    ).join('\n');
+    const csvRows = rows.map(r => {
+      const status = classify(r.text);
+      return [r.date, r.who, r.text.replace(/"/g, '""'), status.label]
+        .map(v => '"' + v + '"').join(',');
+    }).join('\n');
     mdOut.dataset.csv = csvHeader + csvRows;
   }
 
@@ -396,10 +415,7 @@
   document.getElementById('extract').addEventListener('click', function () {
     const raw = document.getElementById('input').value;
     if (!raw.trim()) { showToast('テキストを貼り付けてください'); return; }
-    const messages = parseMessages(raw);
-    const hits = messages
-      .filter(m => keywordRe.test(m.text))
-      .map(m => ({ ...m, status: classify(m.text) }));
+    const hits = parseText(raw);
     render(hits);
   });
 
