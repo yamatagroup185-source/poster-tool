@@ -15,6 +15,8 @@
     --accent-soft: #e6efe8;
     --warn: #a8622f;
     --warn-soft: #f5e8dd;
+    --danger: #b83232;
+    --danger-soft: #f9ecec;
     --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     --serif: "Shippori Mincho", "Hiragino Mincho ProN", serif;
     --sans: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
@@ -30,6 +32,8 @@
       --accent-soft: #2a352c;
       --warn: #d99a6c;
       --warn-soft: #3a2c22;
+      --danger: #e57373;
+      --danger-soft: #3c2424;
     }
   }
   * { box-sizing: border-box; }
@@ -132,6 +136,17 @@
     font-family: var(--sans);
   }
   button.add-btn:hover { opacity: 0.9; }
+  button.danger-btn {
+    background: var(--danger);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.danger-btn:hover { opacity: 0.9; }
   button.ghost {
     background: transparent;
     color: var(--accent);
@@ -176,6 +191,7 @@
   }
   td.date { white-space: nowrap; color: var(--ink-soft); font-size: 13px; }
   td.who { white-space: nowrap; }
+  td.chk { width: 30px; text-align: center; }
   .status {
     display: inline-block;
     padding: 2px 9px;
@@ -242,34 +258,37 @@
   <header>
     <h1>ポスター・フライヤー報告 抽出ツール</h1>
     <p class="sub">LINEの「トーク履歴」のほか、手入力の報告メモを貼り付けて抽出し、上の表へ保存・蓄積できます。</p>
-    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日（自動蓄積・保存対応版）</p>
+    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日（行選択・削除機能対応版）</p>
   </header>
 
   <div class="panel">
     <div class="section-title">
       <span>現在の設置状況（保存・蓄積済み一覧）</span>
-      <button class="subtle-reset" id="resetCustomData">追加データをリセット</button>
+      <div>
+        <button class="danger-btn" id="deleteSelected" style="display:none; margin-right:8px;">選択した行を削除</button>
+        <button class="subtle-reset" id="resetCustomData">全追加リセット</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>日付</th><th>報告者</th><th>場所・内容</th><th>状況</th></tr>
+          <tr><th class="chk"></th><th>日付</th><th>報告者</th><th>場所・内容</th><th>状況</th></tr>
         </thead>
         <tbody id="mainTableBody">
-          <!-- 初期データ -->
-          <tr><td class="date">9/14</td><td class="who">きむらしんのすけ</td><td>大正・里仁・城北・湖山 保育園</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/14</td><td class="who">奥田健太</td><td>自社事務所2店舗</td><td><span class="status ok">OK（引取り予定）</span></td></tr>
-          <tr><td class="date">9/14</td><td class="who">森本記祥（居酒家もんたや）</td><td>もんたや</td><td><span class="status ok">OK（貼れる）</span></td></tr>
-          <tr><td class="date">9/14</td><td class="who">むらおか（あなた）</td><td>ヤマタ社内（樋口経由）</td><td><span class="status pending">打診中・確約なし</span></td></tr>
-          <tr><td class="date">9/14</td><td class="who">山根央樹</td><td>あすなろ保育園</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/15</td><td class="who">谷口直哉</td><td>第一〜第四幼稚園</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/16</td><td class="who">ミー2（那須さん）</td><td>焼き鳥すみれ／焼肉牛ざんまい／餃子屋笑う門（店外）／ロンゴロンゴ駅前・末広・雲山店</td><td><span class="status ok">設置完了</span></td></tr>
-          <tr><td class="date">9/17</td><td class="who">中央企画 増田</td><td>ポスター：スターボール、ローソン江津／チラシ：サンヨグループ各飲食店（パチンコ屋以外）、スターボール、こむわかさ／中央企画自社</td><td><span class="status ok">OK・設置済み</span></td></tr>
-          <tr><td class="date">9/17</td><td class="who">きむらしんのすけ</td><td>まなびや園×2</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/17</td><td class="who">リンク倉田えみ</td><td>セブンイレブン面影小前店</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/17</td><td class="who">まい</td><td>賀露公民館（ポスター・チラシ）</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/18</td><td class="who">むらおか（あなた）</td><td>ジュジュアン／翁（たこ焼き）／まちパル</td><td><span class="status ok">OK</span></td></tr>
-          <tr><td class="date">9/18</td><td class="who">むらおか（あなた）</td><td>大宝麻辣担</td><td><span class="status pending">交渉中（渡し済み）</span></td></tr>
+          <!-- 固定の初期データ -->
+          <tr><td class="chk"></td><td class="date">9/14</td><td class="who">きむらしんのすけ</td><td>大正・里仁・城北・湖山 保育園</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/14</td><td class="who">奥田健太</td><td>自社事務所2店舗</td><td><span class="status ok">OK（引取り予定）</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/14</td><td class="who">森本記祥（居酒家もんたや）</td><td>もんたや</td><td><span class="status ok">OK（貼れる）</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/14</td><td class="who">むらおか（あなた）</td><td>ヤマタ社内（樋口経由）</td><td><span class="status pending">打診中・確約なし</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/14</td><td class="who">山根央樹</td><td>あすなろ保育園</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/15</td><td class="who">谷口直哉</td><td>第一〜第四幼稚園</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/16</td><td class="who">ミー2（那須さん）</td><td>焼き鳥すみれ／焼肉牛ざんまい／餃子屋笑う門（店外）／ロンゴロンゴ駅前・末広・雲山店</td><td><span class="status ok">設置完了</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/17</td><td class="who">中央企画 増田</td><td>ポスター：スターボール、ローソン江津／チラシ：サンヨグループ各飲食店（パチンコ屋以外）、スターボール、こむわかさ／中央企画自社</td><td><span class="status ok">OK・設置済み</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/17</td><td class="who">きむらしんのすけ</td><td>まなびや園×2</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/17</td><td class="who">リンク倉田えみ</td><td>セブンイレブン面影小前店</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/17</td><td class="who">まい</td><td>賀露公民館（ポスター・チラシ）</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/18</td><td class="who">むらおか（あなた）</td><td>ジュジュアン／翁（たこ焼き）／まちパル</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="chk"></td><td class="date">9/18</td><td class="who">むらおか（あなた）</td><td>大宝麻辣担</td><td><span class="status pending">交渉中（渡し済み）</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -388,6 +407,30 @@
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  function updateDeleteBtnVisibility() {
+    const checked = document.querySelectorAll('.row-chk:checked').length;
+    const btn = document.getElementById('deleteSelected');
+    if (checked > 0) {
+      btn.style.display = 'inline-block';
+      btn.textContent = '選択した' + checked + '件を削除';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+
+  function renderCustomRow(r, id) {
+    const tr = document.createElement('tr');
+    tr.className = 'custom-added-row';
+    tr.dataset.id = id;
+    tr.innerHTML =
+      '<td class="chk"><input type="checkbox" class="row-chk" data-id="' + id + '"></td>' +
+      '<td class="date">' + escapeHtml(r.date) + '</td>' +
+      '<td class="who">' + escapeHtml(r.who) + '</td>' +
+      '<td>' + escapeHtml(r.text) + '</td>' +
+      '<td><span class="status ' + r.status.cls + '">' + escapeHtml(r.status.label) + '</span></td>';
+    return tr;
+  }
+
   function loadSavedData() {
     const saved = localStorage.getItem('poster_tool_custom_rows');
     if (!saved) return;
@@ -395,34 +438,35 @@
       const rows = JSON.parse(saved);
       const mainBody = document.getElementById('mainTableBody');
       rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.className = 'custom-added-row';
-        tr.innerHTML =
-          '<td class="date">' + escapeHtml(r.date) + '</td>' +
-          '<td class="who">' + escapeHtml(r.who) + '</td>' +
-          '<td>' + escapeHtml(r.text) + '</td>' +
-          '<td><span class="status ' + r.status.cls + '">' + escapeHtml(r.status.label) + '</span></td>';
+        const tr = renderCustomRow(r, r.id);
         mainBody.appendChild(tr);
       });
+      attachChkListeners();
     } catch (e) {}
+  }
+
+  function attachChkListeners() {
+    document.querySelectorAll('.row-chk').forEach(chk => {
+      chk.removeEventListener('change', updateDeleteBtnVisibility);
+      chk.addEventListener('change', updateDeleteBtnVisibility);
+    });
   }
 
   function saveRowToMain(rows) {
     const saved = JSON.parse(localStorage.getItem('poster_tool_custom_rows') || '[]');
-    const newSaved = saved.concat(rows);
+    const mainBody = document.getElementById('mainTableBody');
+    
+    const rowsWithId = rows.map(r => ({ ...r, id: Date.now() + '_' + Math.random().toString(36).substr(2, 4) }));
+    const newSaved = saved.concat(rowsWithId);
+    
     localStorage.setItem('poster_tool_custom_rows', JSON.stringify(newSaved));
 
-    const mainBody = document.getElementById('mainTableBody');
-    rows.forEach(r => {
-      const tr = document.createElement('tr');
-      tr.className = 'custom-added-row';
-      tr.innerHTML =
-        '<td class="date">' + escapeHtml(r.date) + '</td>' +
-        '<td class="who">' + escapeHtml(r.who) + '</td>' +
-        '<td>' + escapeHtml(r.text) + '</td>' +
-        '<td><span class="status ' + r.status.cls + '">' + escapeHtml(r.status.label) + '</span></td>';
+    rowsWithId.forEach(r => {
+      const tr = renderCustomRow(r, r.id);
       mainBody.appendChild(tr);
     });
+    
+    attachChkListeners();
     showToast('上の表に保存・蓄積しました！');
   }
 
@@ -490,10 +534,31 @@
     document.getElementById('resultPanel').style.display = 'none';
   });
 
+  document.getElementById('deleteSelected').addEventListener('click', function () {
+    const checkedChks = document.querySelectorAll('.row-chk:checked');
+    if (checkedChks.length === 0) return;
+
+    if (confirm(checkedChks.length + '件のデータを削除しますか？')) {
+      const idsToDelete = Array.from(checkedChks).map(c => c.dataset.id);
+      let saved = JSON.parse(localStorage.getItem('poster_tool_custom_rows') || '[]');
+      saved = saved.filter(r => !idsToDelete.includes(r.id));
+      localStorage.setItem('poster_tool_custom_rows', JSON.stringify(saved));
+
+      idsToDelete.forEach(id => {
+        const row = document.querySelector('.custom-added-row[data-id="' + id + '"]');
+        if (row) row.remove();
+      });
+
+      updateDeleteBtnVisibility();
+      showToast('指定したデータを削除しました');
+    }
+  });
+
   document.getElementById('resetCustomData').addEventListener('click', function () {
-    if (confirm('画面上で追加保存したデータを取り消して、初期表示に戻しますか？')) {
+    if (confirm('追加保存したデータをすべて消去して、初期表示に戻しますか？')) {
       localStorage.removeItem('poster_tool_custom_rows');
       document.querySelectorAll('.custom-added-row').forEach(e => e.remove());
+      updateDeleteBtnVisibility();
       showToast('追加データをリセットしました');
     }
   });
