@@ -74,7 +74,7 @@
   }
   textarea {
     width: 100%;
-    min-height: 220px;
+    min-height: 180px;
     resize: vertical;
     background: var(--bg);
     color: var(--ink);
@@ -91,7 +91,7 @@
   }
   .row {
     display: flex;
-    gap: 14px;
+    gap: 10px;
     align-items: center;
     flex-wrap: wrap;
     margin-top: 14px;
@@ -113,24 +113,46 @@
     color: var(--panel);
     border: none;
     border-radius: 7px;
-    padding: 11px 22px;
+    padding: 10px 20px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     font-family: var(--sans);
   }
   button.primary:hover { opacity: 0.9; }
+  button.add-btn {
+    background: #2b5b84;
+    color: #ffffff;
+    border: none;
+    border-radius: 7px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  button.add-btn:hover { opacity: 0.9; }
   button.ghost {
     background: transparent;
     color: var(--accent);
     border: 1px solid var(--accent);
     border-radius: 7px;
-    padding: 10px 18px;
+    padding: 9px 16px;
     font-size: 13px;
     cursor: pointer;
     font-family: var(--sans);
   }
   button.ghost:hover { background: var(--accent-soft); }
+  button.subtle-reset {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  button.subtle-reset:hover { background: var(--bg); }
   .count {
     font-size: 13px;
     color: var(--ink-soft);
@@ -193,6 +215,7 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s, transform 0.2s;
+    z-index: 999;
   }
   .toast.show {
     opacity: 1;
@@ -202,6 +225,9 @@
     font-size: 13px;
     color: var(--ink-soft);
     margin: 0 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   details summary {
     cursor: pointer;
@@ -215,18 +241,22 @@
 <div class="wrap">
   <header>
     <h1>ポスター・フライヤー報告 抽出ツール</h1>
-    <p class="sub">LINEの「トーク履歴」のほか、手入力の報告メモ（例：「9月18日 むらおか ポスター設置完了」など）を貼り付けても柔軟に抽出し一覧化します。</p>
-    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日（柔軟抽出対応版）</p>
+    <p class="sub">LINEの「トーク履歴」のほか、手入力の報告メモを貼り付けて抽出し、上の表へ保存・蓄積できます。</p>
+    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日（自動蓄積・保存対応版）</p>
   </header>
 
   <div class="panel">
-    <p class="section-title">現在の設置状況（9/22時点でまとめ済み）</p>
+    <div class="section-title">
+      <span>現在の設置状況（保存・蓄積済み一覧）</span>
+      <button class="subtle-reset" id="resetCustomData">追加データをリセット</button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>日付</th><th>報告者</th><th>場所</th><th>状況</th></tr>
+          <tr><th>日付</th><th>報告者</th><th>場所・内容</th><th>状況</th></tr>
         </thead>
-        <tbody>
+        <tbody id="mainTableBody">
+          <!-- 初期データ -->
           <tr><td class="date">9/14</td><td class="who">きむらしんのすけ</td><td>大正・里仁・城北・湖山 保育園</td><td><span class="status ok">OK</span></td></tr>
           <tr><td class="date">9/14</td><td class="who">奥田健太</td><td>自社事務所2店舗</td><td><span class="status ok">OK（引取り予定）</span></td></tr>
           <tr><td class="date">9/14</td><td class="who">森本記祥（居酒家もんたや）</td><td>もんたや</td><td><span class="status ok">OK（貼れる）</span></td></tr>
@@ -247,7 +277,7 @@
 
   <div class="panel">
     <label class="field-label" for="input">テキストを貼り付けて更新（LINEトーク履歴、または報告メモ）</label>
-    <textarea id="input" placeholder="【入力例】&#10;・9月18日むらおかポスター設置ヤマタ本社&#10;・9/19 谷口 チラシ50枚 配布完了&#10;・LINEからエクスポートしたトーク履歴ファイル"></textarea>
+    <textarea id="input" placeholder="【入力例】&#10;・9/22 むらおか ポスター設置ヤマタ本社&#10;・9/23 谷口 チラシ50枚 配布完了"></textarea>
     <div class="row">
       <button class="primary" id="extract">抽出して一覧化</button>
       <span class="keywords">対象語：<code>ポスター</code><code>フライヤー</code><code>チラシ</code><code>設置</code><code>配布</code></span>
@@ -255,22 +285,23 @@
   </div>
 
   <div class="panel" id="resultPanel" style="display:none;">
-    <div class="row" style="justify- space-between; margin-top:0; display:flex; width:100%;">
+    <div class="row" style="justify-content: space-between; margin-top:0; width:100%;">
       <p class="count" id="count"></p>
       <div class="row" style="margin-top:0; margin-left:auto;">
-        <button class="ghost" id="copyMd">Markdown表をコピー</button>
-        <button class="ghost" id="copyCsv">CSVをコピー</button>
+        <button class="add-btn" id="addToMain">↑ 上の表に追加して保存</button>
+        <button class="ghost" id="copyMd">Markdownコピー</button>
+        <button class="ghost" id="copyCsv">CSVコピー</button>
       </div>
     </div>
     <div class="table-wrap">
-      <table id="resultTable">
+      <table>
         <thead>
           <tr><th>日付</th><th>報告者</th><th>内容</th><th>判定</th></tr>
         </thead>
         <tbody id="resultBody"></tbody>
       </table>
     </div>
-    <div class="empty" id="emptyMsg" style="display:none;">該当する情報が見つかりませんでした。テキストに日付や報告内容が含まれているか確認してください。</div>
+    <div class="empty" id="emptyMsg" style="display:none;">該当する情報が見つかりませんでした。</div>
     <details style="margin-top:14px;">
       <summary>Markdownコードブロックとして表示</summary>
       <pre class="output" id="mdOutput"></pre>
@@ -285,6 +316,8 @@
   const keywordRe = /(ポスター|フライヤー|チラシ|設置|配布|掲示)/i;
   const okRe = /(オッケー|OK|ok|Ok|完了|設置|貼|承諾|許可|いただきました|完了|済み)/;
   const pendingRe = /(交渉中|打診|検討|確認中|未定|依頼中|お願い)/;
+
+  let currentExtractedRows = [];
 
   function classify(text) {
     if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK系', cls: 'ok' };
@@ -305,13 +338,9 @@
       let line = rawLine.replace(/[\u2068\u2069]/g, '').trim();
       if (!line) continue;
 
-      // LINEトーク履歴のヘッダー日付
       const dh = line.match(dateReHeader);
-      if (dh) {
-        currentDate = dh[1];
-      }
+      if (dh) { currentDate = dh[1]; }
 
-      // LINE正規フォーマット行
       const mm = line.match(msgStartRe);
       if (mm) {
         currentWho = mm[2].trim();
@@ -322,26 +351,22 @@
         continue;
       }
 
-      // 手入力メモ・簡易テキストの解析（例: 9月18日むらおかポスター設置ヤマタ本社）
       if (keywordRe.test(line)) {
         let date = currentDate;
         let who = currentWho;
         let content = line;
 
-        // 行内の日付を抽出
         const inlineDate = line.match(/(\d{1,2}[\/月]\d{1,2}日?)/);
         if (inlineDate) {
           date = inlineDate[1];
           content = content.replace(inlineDate[0], '').trim();
         }
 
-        // 名前判定（代表的な名前やスペース区切りの冒頭）
         const spaceParts = content.split(/[\s ]+/);
         if (spaceParts.length > 1) {
           who = spaceParts[0];
           content = spaceParts.slice(1).join(' ');
         } else {
-          // 「むらおか」「きむら」などの既知の報告者パターンの抽出を試みる
           const knownWho = content.match(/^(むらおか|きむら|奥田|森本|山根|谷口|那須|増田|倉田|まい|樋口)/);
           if (knownWho) {
             who = knownWho[1];
@@ -363,7 +388,46 @@
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  function loadSavedData() {
+    const saved = localStorage.getItem('poster_tool_custom_rows');
+    if (!saved) return;
+    try {
+      const rows = JSON.parse(saved);
+      const mainBody = document.getElementById('mainTableBody');
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'custom-added-row';
+        tr.innerHTML =
+          '<td class="date">' + escapeHtml(r.date) + '</td>' +
+          '<td class="who">' + escapeHtml(r.who) + '</td>' +
+          '<td>' + escapeHtml(r.text) + '</td>' +
+          '<td><span class="status ' + r.status.cls + '">' + escapeHtml(r.status.label) + '</span></td>';
+        mainBody.appendChild(tr);
+      });
+    } catch (e) {}
+  }
+
+  function saveRowToMain(rows) {
+    const saved = JSON.parse(localStorage.getItem('poster_tool_custom_rows') || '[]');
+    const newSaved = saved.concat(rows);
+    localStorage.setItem('poster_tool_custom_rows', JSON.stringify(newSaved));
+
+    const mainBody = document.getElementById('mainTableBody');
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = 'custom-added-row';
+      tr.innerHTML =
+        '<td class="date">' + escapeHtml(r.date) + '</td>' +
+        '<td class="who">' + escapeHtml(r.who) + '</td>' +
+        '<td>' + escapeHtml(r.text) + '</td>' +
+        '<td><span class="status ' + r.status.cls + '">' + escapeHtml(r.status.label) + '</span></td>';
+      mainBody.appendChild(tr);
+    });
+    showToast('上の表に保存・蓄積しました！');
+  }
+
   function render(rows) {
+    currentExtractedRows = rows;
     const panel = document.getElementById('resultPanel');
     const body = document.getElementById('resultBody');
     const empty = document.getElementById('emptyMsg');
@@ -384,6 +448,7 @@
     let md = '| 日付 | 報告者 | 内容 | 判定 |\n|---|---|---|---|\n';
     for (const r of rows) {
       const status = classify(r.text);
+      r.status = status;
       const tr = document.createElement('tr');
       tr.innerHTML =
         '<td class="date">' + escapeHtml(r.date) + '</td>' +
@@ -398,8 +463,7 @@
 
     const csvHeader = '日付,報告者,内容,判定\n';
     const csvRows = rows.map(r => {
-      const status = classify(r.text);
-      return [r.date, r.who, r.text.replace(/"/g, '""'), status.label]
+      return [r.date, r.who, r.text.replace(/"/g, '""'), r.status.label]
         .map(v => '"' + v + '"').join(',');
     }).join('\n');
     mdOut.dataset.csv = csvHeader + csvRows;
@@ -419,19 +483,35 @@
     render(hits);
   });
 
+  document.getElementById('addToMain').addEventListener('click', function () {
+    if (!currentExtractedRows || currentExtractedRows.length === 0) return;
+    saveRowToMain(currentExtractedRows);
+    document.getElementById('input').value = '';
+    document.getElementById('resultPanel').style.display = 'none';
+  });
+
+  document.getElementById('resetCustomData').addEventListener('click', function () {
+    if (confirm('画面上で追加保存したデータを取り消して、初期表示に戻しますか？')) {
+      localStorage.removeItem('poster_tool_custom_rows');
+      document.querySelectorAll('.custom-added-row').forEach(e => e.remove());
+      showToast('追加データをリセットしました');
+    }
+  });
+
   document.getElementById('copyMd').addEventListener('click', async function () {
     const md = document.getElementById('mdOutput').dataset.md || '';
-    if (!md) { showToast('先に抽出してください'); return; }
-    try { await navigator.clipboard.writeText(md); showToast('Markdown表をコピーしました'); }
-    catch (e) { showToast('コピーに失敗しました'); }
+    if (!md) return;
+    try { await navigator.clipboard.writeText(md); showToast('Markdown表をコピーしました'); } catch (e) {}
   });
 
   document.getElementById('copyCsv').addEventListener('click', async function () {
     const csv = document.getElementById('mdOutput').dataset.csv || '';
-    if (!csv) { showToast('先に抽出してください'); return; }
-    try { await navigator.clipboard.writeText(csv); showToast('CSVをコピーしました'); }
-    catch (e) { showToast('コピーに失敗しました'); }
+    if (!csv) return;
+    try { await navigator.clipboard.writeText(csv); showToast('CSVをコピーしました'); } catch (e) {}
   });
+
+  // 初期読み込み
+  loadSavedData();
 })();
 </script>
 </body>
