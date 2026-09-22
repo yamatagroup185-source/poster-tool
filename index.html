@@ -3,286 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ポスター・フライヤー報告 抽出・転記ツール</title>
+<title>AIポスター・チラシ報告転記ツール</title>
 <style>
   :root {
-    --bg: #f6f4ee;
-    --panel: #ffffff;
-    --ink: #26261f;
-    --ink-soft: #6b6a5e;
-    --line: #dedad0;
-    --accent: #3b6e52;
-    --accent-soft: #e6efe8;
-    --mono: "SFMono-Regular", Consolas, monospace;
-    --serif: "Shippori Mincho", serif;
-    --sans: "Zen Kaku Gothic New", sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #1b1c17;
-      --panel: #242520;
-      --ink: #eeece2;
-      --ink-soft: #a5a394;
-      --line: #3a3b32;
-      --accent: #7fb996;
-      --accent-soft: #2a352c;
-    }
+    --bg: #f6f4ee; --panel: #ffffff; --ink: #26261f; --ink-soft: #6b6a5e;
+    --line: #dedad0; --accent: #3b6e52; --mono: monospace; --sans: sans-serif;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--sans);
-    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0;
-    line-height: 1.7;
-  }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 40px 20px 80px; }
-  header { margin-bottom: 24px; }
-  h1 { font-family: var(--serif); font-size: clamp(20px, 4vw, 26px); font-weight: 600; margin: 0 0 8px; }
-  .sub { color: var(--ink-soft); font-size: 14px; margin: 0; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.6; }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--ink-soft); font-size: 13px; margin-bottom: 20px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-  label.field-label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; font-weight: 600; }
-  input[type="text"], textarea {
-    width: 100%;
-    background: var(--bg);
-    color: var(--ink);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-  textarea { min-height: 160px; resize: vertical; font-family: var(--mono); }
-  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
-  button.primary {
-    background: var(--accent); color: var(--panel); border: none; border-radius: 7px;
-    padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
-  }
-  button.send-sheets {
-    background: #0f9d58; color: #ffffff; border: none; border-radius: 7px;
-    padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
-  }
-  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 7px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-  th { color: var(--ink-soft); font-weight: 600; font-size: 12px; }
-  td.date { white-space: nowrap; color: var(--ink-soft); font-size: 13px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: var(--line); font-weight: 600; }
-  .badge.poster { background: #e3f2fd; color: #1565c0; }
-  .badge.flyer { background: #fff3e0; color: #e65100; }
-  .badge.both { background: #f3e5f5; color: #7b1fa2; }
-  .status { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 12px; }
-  .status.ok { background: var(--accent-soft); color: var(--accent); }
-  .status.pending { background: #f5e8dd; color: #a8622f; }
-  .status.info { background: var(--line); color: var(--ink-soft); }
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
-    background: var(--ink); color: var(--bg); padding: 9px 18px; border-radius: 100px;
-    font-size: 13px; opacity: 0; transition: 0.2s; pointer-events: none; z-index: 999;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; font-weight: bold; }
+  input[type="text"], textarea { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+  textarea { min-height: 120px; resize: vertical; }
+  .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 12px 20px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .tab-group { display: flex; gap: 10px; margin-bottom: 15px; }
+  .tab { flex: 1; padding: 8px; text-align: center; background: var(--line); border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .tab.active { background: var(--accent); color: white; font-weight: bold; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>ポスター・フライヤー報告 抽出・転記ツール</h1>
-    <p class="sub">LINE文章やメモから「場所」と「区分（ポスター/フライヤー）」だけを抽出してスプシへ転記します。</p>
-  </header>
+  <h1>🤖 AI ポスター・チラシ報告転記ツール</h1>
+  <p class="sub">LINEのバラバラな文章もスクショ画像も、AIが解釈して自動でスプシへ転記します。</p>
 
-  <details class="panel" style="margin-bottom: 16px;">
+  <details class="panel">
     <summary style="font-size:13px; color:var(--ink-soft); cursor:pointer;">⚙️ スプレッドシート連携URLの設定</summary>
-    <div style="margin-top: 12px;">
-      <label class="field-label" for="gasUrl">Google Apps ScriptのWebアプリURL</label>
+    <div style="margin-top: 10px;">
       <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
-      <button class="ghost" id="saveUrl" style="margin-top:8px;">URLを保存</button>
+      <button onclick="saveUrl()" style="margin-top:5px; padding:5px 10px;">URL保存</button>
     </div>
   </details>
 
   <div class="panel">
-    <label class="field-label" for="reporter">報告者（任意・一括設定）</label>
-    <input type="text" id="reporter" placeholder="例: むらおか（空欄でもOK）" style="margin-bottom: 14px;">
+    <div class="tab-group">
+      <div class="tab active" id="tabText" onclick="switchTab('text')">💬 テキストを貼り付け</div>
+      <div class="tab" id="tabImage" onclick="switchTab('image')">📷 画像（スクショ）をアップ</div>
+    </div>
 
-    <label class="field-label" for="input">LINEのテキストやメモを貼り付け</label>
-    <textarea id="input" placeholder="【入力例】&#10;ヤマタ本社にポスター貼ってもらいました！&#10;大正保育園 チラシ50枚設置OKです&#10;ジュジュアン ポスターとフライヤー両方受け取ってもらえました"></textarea>
-    <div class="row">
-      <button class="primary" id="extract">不要情報を削って抽出</button>
+    <div id="secText">
+      <label>LINEのトーク文やメモ言をそのまま貼り付け</label>
+      <textarea id="inputText" placeholder="【例】&#10;むらおかです！今日大正保育園と湖山保育園にチラシ50枚ずつ渡してきました〜！あとヤマタ本社ポスターも設置完了です！"></textarea>
     </div>
-  </div>
 
-  <div class="panel" id="resultPanel" style="display:none;">
-    <div class="row" style="justify-content: space-between; margin-top:0; width:100%;">
-      <span style="font-size:13px; color:var(--ink-soft);" id="count"></span>
-      <button class="send-sheets" id="sendToSheets">📊 スプレッドシートへ送信</button>
+    <div id="secImage" style="display:none;">
+      <label>LINEのスクショや写真をアップロード</label>
+      <input type="file" id="inputImage" accept="image/*">
     </div>
-    <div style="overflow-x: auto; margin-top: 12px;">
-      <table>
-        <thead>
-          <tr><th>日付</th><th>報告者</th><th>設置場所</th><th>区分</th><th>判定</th></tr>
-        </thead>
-        <tbody id="resultBody"></tbody>
-      </table>
-    </div>
+
+    <button class="btn" id="sendBtn" onclick="processAndSend()">✨ AIで解析してスプレッドシートへ送信</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-(function () {
-  const okRe = /(オッケー|OK|ok|Ok|完了|設置|貼|承諾|許可|いただきました|済み)/;
-  const pendingRe = /(交渉中|打診|検討|確認中|未定|依頼中|お願い)/;
+  let currentTab = 'text';
 
-  let currentExtractedRows = [];
-
-  const savedUrl = localStorage.getItem('poster_tool_gas_url') || '';
+  const savedUrl = localStorage.getItem('poster_ai_gas_url') || '';
   if (savedUrl) document.getElementById('gasUrl').value = savedUrl;
 
-  document.getElementById('saveUrl').addEventListener('click', function() {
-    const url = document.getElementById('gasUrl').value.trim();
-    localStorage.setItem('poster_tool_gas_url', url);
-    showToast('連携URLを保存しました');
-  });
-
-  // 区分（ポスター/フライヤー/両方）の判定
-  function detectType(text) {
-    const hasPoster = /(ポスター)/.test(text);
-    const hasFlyer = /(チラシ|フライヤー)/.test(text);
-
-    if (hasPoster && hasFlyer) return { label: '両方', cls: 'both' };
-    if (hasPoster) return { label: 'ポスター', cls: 'poster' };
-    if (hasFlyer) return { label: 'フライヤー', cls: 'flyer' };
-    return { label: 'ポスター', cls: 'poster' }; // デフォルトはポスター
+  function saveUrl() {
+    localStorage.setItem('poster_ai_gas_url', document.getElementById('gasUrl').value.trim());
+    showToast('URLを保存しました');
   }
 
-  // 雑多な文章から「場所名」だけをきれいに抜き出す処理
-  function cleanLocation(text) {
-    let loc = text;
-
-    // 日付表現の削除
-    loc = loc.replace(/(\d{1,2}[\/月]\d{1,2}日?)/g, '');
-
-    // 余計な接続詞や文言・挨拶の削除
-    loc = loc.replace(/(ポスター|チラシ|フライヤー|設置|配布|掲示|貼ってもらいました|置かせてもらいました|受け取ってもらえました|OK|オッケー|完了|済み|です|でした|よろしくお願いいたします|おねがいします)/gi, '');
-    loc = loc.replace(/(\d+枚|\d+部)/g, ''); // 枚数表記の削除
-    loc = loc.replace(/(に|へ|で|も|両方|各種)/g, ' '); // 助詞をスペースに置換
-
-    // 先頭や末尾の不要な記号・スペースの除去
-    loc = loc.trim().replace(/^[\s・:：\-\/]+|[\s・:：\-\/]+$/g, '');
-
-    return loc || text; // 万が一空になったら元の文章を返す
-  }
-
-  function classifyStatus(text) {
-    if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK', cls: 'ok' };
-    if (pendingRe.test(text)) return { label: '交渉中', cls: 'pending' };
-    return { label: 'OK', cls: 'ok' };
-  }
-
-  function parseText(raw) {
-    const lines = raw.split(/\r?\n/);
-    const results = [];
-    const reporterInput = document.getElementById('reporter').value.trim();
-    
-    const today = new Date();
-    const dateStr = (today.getMonth() + 1) + '/' + today.getDate();
-
-    for (let rawLine of lines) {
-      let line = rawLine.trim();
-      if (!line) continue;
-
-      // LINEのヘッダーや時間の行はスキップ
-      if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(line) || /^\d{1,2}:\d{2}\t/.test(line)) continue;
-
-      const typeInfo = detectType(line);
-      const cleanedLoc = cleanLocation(line);
-      const statusInfo = classifyStatus(line);
-
-      results.push({
-        date: dateStr,
-        who: reporterInput || '担当者',
-        location: cleanedLoc,
-        type: typeInfo.label,
-        typeCls: typeInfo.cls,
-        status: statusInfo.label,
-        statusCls: statusInfo.cls
-      });
-    }
-    return results;
-  }
-
-  function render(rows) {
-    currentExtractedRows = rows;
-    const panel = document.getElementById('resultPanel');
-    const body = document.getElementById('resultBody');
-    const count = document.getElementById('count');
-    panel.style.display = 'block';
-    body.innerHTML = '';
-
-    count.textContent = rows.length + '件をクレンジング抽出完了';
-
-    for (const r of rows) {
-      const tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td class="date">' + r.date + '</td>' +
-        '<td>' + r.who + '</td>' +
-        '<td><strong>' + r.location + '</strong></td>' +
-        '<td><span class="badge ' + r.typeCls + '">' + r.type + '</span></td>' +
-        '<td><span class="status ' + r.statusCls + '">' + r.status + '</span></td>';
-      body.appendChild(tr);
-    }
+  function switchTab(type) {
+    currentTab = type;
+    document.getElementById('tabText').classList.toggle('active', type === 'text');
+    document.getElementById('tabImage').classList.toggle('active', type === 'image');
+    document.getElementById('secText').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('secImage').style.display = type === 'image' ? 'block' : 'none';
   }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
   }
 
-  document.getElementById('extract').addEventListener('click', function () {
-    const raw = document.getElementById('input').value;
-    if (!raw.trim()) { showToast('テキストを入力してください'); return; }
-    render(parseText(raw));
-  });
+  async function processAndSend() {
+    const url = localStorage.getItem('poster_ai_gas_url');
+    if (!url) { alert('設定エリアでGASのWebアプリURLを保存してください。'); return; }
 
-  document.getElementById('sendToSheets').addEventListener('click', function () {
-    const url = localStorage.getItem('poster_tool_gas_url');
-    if (!url) {
-      alert('設定エリアを開いて「Google Apps ScriptのWebアプリURL」を入力・保存してください。');
-      return;
-    }
-
-    const payload = currentExtractedRows.map(r => ({
-      date: r.date,
-      who: r.who,
-      location: r.location,
-      type: r.type,
-      status: r.status
-    }));
-
-    const btn = document.getElementById('sendToSheets');
+    const btn = document.getElementById('sendBtn');
     btn.disabled = true;
-    btn.textContent = '送信中...';
+    btn.textContent = '🤖 AIが解析＆書き込み中...';
+
+    let payload = {};
+
+    if (currentTab === 'text') {
+      const text = document.getElementById('inputText').value.trim();
+      if (!text) { alert('テキストを入力してください'); btn.disabled = false; btn.textContent = '✨ AIで解析してスプレッドシートへ送信'; return; }
+      payload = { type: 'text', text: text };
+    } else {
+      const fileInput = document.getElementById('inputImage');
+      if (!fileInput.files[0]) { alert('画像を選択してください'); btn.disabled = false; btn.textContent = '✨ AIで解析してスプレッドシートへ送信'; return; }
+      const file = fileInput.files[0];
+      const base64 = await toBase64(file);
+      payload = { type: 'image', data: base64, mimeType: file.type };
+    }
 
     fetch(url, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).then(() => {
-      showToast('スプレッドシートへ送信完了！');
-      document.getElementById('input').value = '';
-      document.getElementById('resultPanel').style.display = 'none';
-      btn.disabled = false;
-      btn.textContent = '📊 スプレッドシートへ送信';
+    }).then(res => res.json()).then(data => {
+      if (data.status === 'success') {
+        showToast(`成功！ ${data.count} 件のデータを自動整理して追加しました！`);
+        document.getElementById('inputText').value = '';
+        document.getElementById('inputImage').value = '';
+      } else {
+        alert('エラーが発生しました: ' + data.message);
+      }
     }).catch(err => {
-      alert('送信に失敗しました。URLを確認してください。');
+      alert('通信エラーが発生しました');
+    }).finally(() => {
       btn.disabled = false;
-      btn.textContent = '📊 スプレッドシートへ送信';
+      btn.textContent = '✨ AIで解析してスプレッドシートへ送信';
     });
+  }
+
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
   });
-})();
 </script>
 </body>
 </html>
