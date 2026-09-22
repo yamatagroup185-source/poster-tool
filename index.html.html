@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ポスター・フライヤー報告 抽出ツール</title>
+<style>
+  :root {
+    --bg: #f6f4ee;
+    --panel: #ffffff;
+    --ink: #26261f;
+    --ink-soft: #6b6a5e;
+    --line: #dedad0;
+    --accent: #3b6e52;
+    --accent-soft: #e6efe8;
+    --warn: #a8622f;
+    --warn-soft: #f5e8dd;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --serif: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+    --sans: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1c17;
+      --panel: #242520;
+      --ink: #eeece2;
+      --ink-soft: #a5a394;
+      --line: #3a3b32;
+      --accent: #7fb996;
+      --accent-soft: #2a352c;
+      --warn: #d99a6c;
+      --warn-soft: #3a2c22;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1c17;
+    --panel: #242520;
+    --ink: #eeece2;
+    --ink-soft: #a5a394;
+    --line: #3a3b32;
+    --accent: #7fb996;
+    --accent-soft: #2a352c;
+    --warn: #d99a6c;
+    --warn-soft: #3a2c22;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0;
+    line-height: 1.7;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+  header {
+    margin-bottom: 28px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(24px, 4vw, 32px);
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+  }
+  .sub {
+    color: var(--ink-soft);
+    font-size: 14px;
+    max-width: 60ch;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  label.field-label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  textarea:focus, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .row {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+  .keywords {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .keywords code {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  button.primary {
+    background: var(--accent);
+    color: var(--panel);
+    border: none;
+    border-radius: 7px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  button.primary:hover { opacity: 0.9; }
+  button.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    padding: 10px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  button.ghost:hover { background: var(--accent-soft); }
+  .count {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  td.date { white-space: nowrap; color: var(--ink-soft); font-size: 13px; }
+  td.who { white-space: nowrap; }
+  .status {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 100px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .status.ok { background: var(--accent-soft); color: var(--accent); }
+  .status.pending { background: var(--warn-soft); color: var(--warn); }
+  .status.info { background: var(--line); color: var(--ink-soft); }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  pre.output {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .empty {
+    color: var(--ink-soft);
+    font-size: 14px;
+    padding: 20px 0;
+  }
+  .toast {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 9px 18px;
+    border-radius: 100px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .section-title {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 12px;
+  }
+  details summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ポスター・フライヤー報告 抽出ツール</h1>
+    <p class="sub">LINEの「トーク履歴を送信」で書き出したテキストをそのまま貼り付けると、ポスター・フライヤー・チラシ関連の報告だけを日付順に一覧化します。判定はキーワードの機械的な拾い出しなので、抽出後の内容は必ず自分の目で確認してください。</p>
+    <p class="sub" style="margin-top:8px; color: var(--accent); font-weight: 600;">最終更新：2026年9月22日</p>
+  </header>
+
+  <div class="panel">
+    <p class="section-title">現在の設置状況（9/22時点でまとめ済み）</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>日付</th><th>報告者</th><th>場所</th><th>状況</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="date">9/14</td><td class="who">きむらしんのすけ</td><td>大正・里仁・城北・湖山 保育園</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/14</td><td class="who">奥田健太</td><td>自社事務所2店舗</td><td><span class="status ok">OK（引取り予定）</span></td></tr>
+          <tr><td class="date">9/14</td><td class="who">森本記祥（居酒家もんたや）</td><td>もんたや</td><td><span class="status ok">OK（貼れる）</span></td></tr>
+          <tr><td class="date">9/14</td><td class="who">むらおか（あなた）</td><td>ヤマタ社内（樋口経由）</td><td><span class="status pending">打診中・確約なし</span></td></tr>
+          <tr><td class="date">9/14</td><td class="who">山根央樹</td><td>あすなろ保育園</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/15</td><td class="who">谷口直哉</td><td>第一〜第四幼稚園</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/16</td><td class="who">ミー2（那須さん）</td><td>焼き鳥すみれ／焼肉牛ざんまい／餃子屋笑う門（店外）／ロンゴロンゴ駅前・末広・雲山店</td><td><span class="status ok">設置完了</span></td></tr>
+          <tr><td class="date">9/17</td><td class="who">中央企画 増田</td><td>ポスター：スターボール、ローソン江津／チラシ：サンヨグループ各飲食店（パチンコ屋以外）、スターボール、こむわかさ／中央企画自社</td><td><span class="status ok">OK・設置済み</span></td></tr>
+          <tr><td class="date">9/17</td><td class="who">きむらしんのすけ</td><td>まなびや園×2</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/17</td><td class="who">リンク倉田えみ</td><td>セブンイレブン面影小前店</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/17</td><td class="who">まい</td><td>賀露公民館（ポスター・チラシ）</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/18</td><td class="who">むらおか（あなた）</td><td>ジュジュアン／翁（たこ焼き）／まちパル</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td class="date">9/18</td><td class="who">むらおか（あなた）</td><td>大宝麻辣担</td><td><span class="status pending">交渉中（渡し済み）</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:14px;">要フォロー：公立保育園は市の後援経由でないと配布不可（9/18 リンク倉田さん報告）。市役所の幼児保育課への持ち込みが必要になる見込みで、来週動ける人が未定。</p>
+  </div>
+
+  <div class="panel">
+    <label class="field-label" for="input">新しいLINEトーク履歴を追加で貼り付けて更新（テキストファイルの中身）</label>
+    <textarea id="input" placeholder="ここに貼り付け（例：2026/09/14&#10;09:06&#10;きむらしんのすけ&#10;おはようございます…ポスターオッケーです😎）"></textarea>
+    <div class="row">
+      <button class="primary" id="extract">抽出して一覧化</button>
+      <span class="keywords">対象語：<code>ポスター</code><code>フライヤー</code><code>チラシ</code></span>
+    </div>
+  </div>
+
+  <div class="panel" id="resultPanel" style="display:none;">
+    <div class="row" style="justify-content: space-between; margin-top:0;">
+      <p class="count" id="count"></p>
+      <div class="row" style="margin-top:0;">
+        <button class="ghost" id="copyMd">Markdown表をコピー</button>
+        <button class="ghost" id="copyCsv">CSVをコピー</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="resultTable">
+        <thead>
+          <tr><th>日付</th><th>報告者</th><th>本文</th><th>判定</th></tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyMsg" style="display:none;">該当するメッセージが見つかりませんでした。キーワードに引っかかる報告が本文に含まれているか確認してください。</div>
+    <details>
+      <summary>Markdownコードブロックとして表示</summary>
+      <pre class="output" id="mdOutput"></pre>
+    </details>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const dateRe = /^(\d{4}\/\d{1,2}\/\d{1,2})[（(]/;
+  const msgStartRe = /^(\d{1,2}:\d{2})\t([^\t]*)\t(.*)$/;
+  const keywordRe = /(ポスター|フライヤー|チラシ)/;
+  const okRe = /(オッケー|OK|ok|Ok|OKです|OKでした|完了|できます|貼れ|承諾|許可|頂きました|いただきました|可)/;
+  const pendingRe = /(交渉中|打診|検討|確認中|お願いします|できないか|お伺い|不可|断られ|お待ち)/;
+
+  function parseMessages(raw) {
+    const lines = raw.split(/\r?\n/);
+    let currentDate = '';
+    let current = null;
+    const messages = [];
+
+    for (const rawLine of lines) {
+      const line = rawLine.replace(/\u2068|\u2069/g, ''); // strip LINE's invisible bidi marks around names
+      const dm = line.match(dateRe);
+      if (dm) {
+        currentDate = dm[1];
+        if (current) { messages.push(current); current = null; }
+        continue;
+      }
+      const mm = line.match(msgStartRe);
+      if (mm) {
+        if (current) messages.push(current);
+        current = { date: currentDate, time: mm[1], who: mm[2].trim(), text: mm[3] };
+      } else if (current) {
+        current.text += '\n' + line;
+      }
+    }
+    if (current) messages.push(current);
+    return messages;
+  }
+
+  function classify(text) {
+    if (okRe.test(text) && !pendingRe.test(text)) return { label: 'OK系', cls: 'ok' };
+    if (pendingRe.test(text)) return { label: '交渉/確認中', cls: 'pending' };
+    return { label: '要確認', cls: 'info' };
+  }
+
+  function excerpt(text) {
+    const cleaned = text.replace(/"/g, '').trim();
+    return cleaned.length > 90 ? cleaned.slice(0, 90) + '…' : cleaned;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function render(rows) {
+    const panel = document.getElementById('resultPanel');
+    const body = document.getElementById('resultBody');
+    const empty = document.getElementById('emptyMsg');
+    const count = document.getElementById('count');
+    const mdOut = document.getElementById('mdOutput');
+    panel.style.display = 'block';
+    body.innerHTML = '';
+
+    if (rows.length === 0) {
+      empty.style.display = 'block';
+      count.textContent = '0件';
+      mdOut.textContent = '';
+      return;
+    }
+    empty.style.display = 'none';
+    count.textContent = rows.length + '件 抽出';
+
+    let md = '| 日付 | 報告者 | 内容 | 判定 |\n|---|---|---|---|\n';
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="date">' + escapeHtml(r.date) + '</td>' +
+        '<td class="who">' + escapeHtml(r.who) + '</td>' +
+        '<td>' + escapeHtml(excerpt(r.text)) + '</td>' +
+        '<td><span class="status ' + r.status.cls + '">' + r.status.label + '</span></td>';
+      body.appendChild(tr);
+      md += '| ' + r.date + ' | ' + r.who + ' | ' + excerpt(r.text).replace(/\|/g, '/').replace(/\n/g, ' ') + ' | ' + r.status.label + ' |\n';
+    }
+    mdOut.textContent = md;
+    mdOut.dataset.md = md;
+
+    const csvHeader = '日付,報告者,内容,判定\n';
+    const csvRows = rows.map(r =>
+      [r.date, r.who, excerpt(r.text).replace(/"/g, '""'), r.status.label]
+        .map(v => '"' + v + '"').join(',')
+    ).join('\n');
+    mdOut.dataset.csv = csvHeader + csvRows;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  document.getElementById('extract').addEventListener('click', function () {
+    const raw = document.getElementById('input').value;
+    if (!raw.trim()) { showToast('テキストを貼り付けてください'); return; }
+    const messages = parseMessages(raw);
+    const hits = messages
+      .filter(m => keywordRe.test(m.text))
+      .map(m => ({ ...m, status: classify(m.text) }));
+    render(hits);
+  });
+
+  document.getElementById('copyMd').addEventListener('click', async function () {
+    const md = document.getElementById('mdOutput').dataset.md || '';
+    if (!md) { showToast('先に抽出してください'); return; }
+    try { await navigator.clipboard.writeText(md); showToast('Markdown表をコピーしました'); }
+    catch (e) { showToast('コピーに失敗しました'); }
+  });
+
+  document.getElementById('copyCsv').addEventListener('click', async function () {
+    const csv = document.getElementById('mdOutput').dataset.csv || '';
+    if (!csv) { showToast('先に抽出してください'); return; }
+    try { await navigator.clipboard.writeText(csv); showToast('CSVをコピーしました'); }
+    catch (e) { showToast('コピーに失敗しました'); }
+  });
+})();
+</script>
+</body>
+</html>
